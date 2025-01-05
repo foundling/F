@@ -1,16 +1,16 @@
 class Component {
 
-  constructor({ className, children, events, data, render, parent }) {
+  constructor({ className, events, data, render, parent, beforeRender }) {
 
     this.name = className;
     this.parent = parent;
     this.data = data || {};
-    this.children = children;
     this.events = events || {};
 
     this.el = document.createElement('div');
     this.el.classList.add(className);
 
+    this.beforeRender = beforeRender || function() {};
     if (render) {
       // revisit this
       const wrapper = () => {
@@ -20,9 +20,57 @@ class Component {
       this.render = wrapper;
     }
 
-    this.render(this.el, data);
-    this.bindEvents();
+    this._beforeRender();
 
+
+  }
+
+  processLoop(el) {
+    // root el
+    const loopExpr = el.getAttribute('f-loop');
+    const [x, _, xs] = loopExpr.split(' ');
+    const inner = el.innerHTML.trim();
+    const templateVariable = /{{([^{]*)}}/.exec(inner)?.[1];
+
+    const [structureName, propName] = templateVariable.split('.');
+
+    // top level structure not found in f-loop=""
+    if (!(xs in this.data)) {
+      throw new Error('undefined: ' + xs);
+    }
+
+    // top level structure not found in template
+    if (!(structureName in this.data)) {
+      throw new Error('undefined: ' + structureName);
+    }
+
+    if (!this.data[xs].map) {
+      throw new Error('not iterable: ' + xs);
+    }
+
+    this.data[xs].forEach(item => {
+      const newEl = document.createElement(el.tagName);
+      newEl.textContent = item[propName];
+      el.parentNode.appendChild(newEl);
+    });
+
+    el.parentNode.removeChild(el);
+
+  }
+
+  fIfyRoot() {
+
+    // create unmounted container
+    // append parsed html to it
+    const html = this.render();
+    const div = document.createElement('div');
+    div.insertAdjacentHTML('beforeend', html);
+
+    // modify html according to custom directives
+    const loops = div.querySelectorAll('[f-loop]');
+    loops.forEach(loop => this.processLoop(loop));
+
+    return div;
   }
 
   bindEvents() {
@@ -57,31 +105,19 @@ class Component {
     this.el.dispatchEvent(e);
   }
 
-  beforeRender() {
-  }
+  async _beforeRender() {
 
-  afterRender() {
-    const possibleHandlers = this.el.querySelector('[data-*]');
-    console.log(possibleHandlers);
+    await this.beforeRender();
+
+    const root = this.fIfyRoot();
+    this.el.appendChild(root);
+
+    this.bindEvents();
+
   }
 
   render(el=this.el, data=this.data) {
-
-    this.removeChildren();
-
-    (this.children || []).forEach(child => {
-      child.parent = this;
-      this.el.appendChild(child.el);
-    });
-
-  }
-
-  removeChildren() {
-
-    while (this.el.lastChild) {
-      this.el.removeChild(this.el.lastChild);
-    }
-
+    
   }
 
 }
