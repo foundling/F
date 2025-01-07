@@ -1,8 +1,13 @@
-class Component {
+class _Component {
 
-  constructor({ className, events, data, render, parent, beforeRender }) {
+  static componentId = 0;
 
+  constructor({ className, components, events, data, render, parent, beforeRender }) {
+
+    this.componentId = _Component.componentId++; 
     this.name = className;
+    this.className = className;
+    this.components = components;
     this.parent = parent;
     this.data = data || {};
     this.events = events || {};
@@ -20,28 +25,67 @@ class Component {
       this.render = wrapper;
     }
 
-    this._beforeRender();
+    //this._beforeRender();
 
 
   }
 
+  init() {
+
+    const root = this.fIfyRoot();
+    this.el.appendChild(root);
+
+    this.traverse(this.el, this.processNode.bind(this));
+
+    this.bindEvents();
+  }
+
+  processNode(el) {
+    
+    const tagName = el.tagName.toLowerCase();
+
+    if (this.components && tagName in this.components) {
+      const componentFactory = this.components[tagName];
+      const newComponent = componentFactory()
+      newComponent.init();
+      el.parentNode.replaceChild(newComponent.el, el);
+    }
+
+    const attributeNames = el.getAttributeNames();
+
+    attributeNames.forEach(name => {
+      if (name === 'f-loop') {
+        this.processLoop(el);
+      }
+
+    });
+
+  }
+  traverse(el, f) {
+
+    if (!el) {
+      return;
+    }
+
+    f(el);
+
+    [...el.children].forEach(child => this.traverse(child, f));
+
+  }
+
   processLoop(el) {
+
     // root el
     const loopExpr = el.getAttribute('f-loop');
     const [x, _, xs] = loopExpr.split(' ');
     const inner = el.innerHTML.trim();
-    const templateVariable = /{{([^{]*)}}/.exec(inner)?.[1];
+    const templateVariable = /{{([^{]*)}}/.exec(inner)?.[1].trim();
 
-    const [structureName, propName] = templateVariable.split('.');
+    const [structureName, propName] = templateVariable.split('.').map(s => s.trim());
 
     // top level structure not found in f-loop=""
     if (!(xs in this.data)) {
       throw new Error('undefined: ' + xs);
-    }
-
-    // top level structure not found in template
-    if (!(structureName in this.data)) {
-      throw new Error('undefined: ' + structureName);
     }
 
     if (!this.data[xs].map) {
@@ -54,7 +98,7 @@ class Component {
       el.parentNode.appendChild(newEl);
     });
 
-    el.parentNode.removeChild(el);
+    //el.parentNode.removeChild(el);
 
   }
 
@@ -109,10 +153,6 @@ class Component {
 
     await this.beforeRender();
 
-    const root = this.fIfyRoot();
-    this.el.appendChild(root);
-
-    this.bindEvents();
 
   }
 
@@ -120,6 +160,13 @@ class Component {
     
   }
 
+}
+
+// component factory
+function Component({...args}) {
+  return function() {
+    return new _Component({...args});
+  }
 }
 
 export { Component };
