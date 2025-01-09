@@ -101,6 +101,28 @@ class _Component {
   processTemplate(el, context) {
   }
 
+  resolveValue(item, path) {
+
+    // item, title, length, toString, constructor
+    let pathParts = path.split('.');
+
+    while (pathParts.length > 0) {
+
+      const op = pathParts.shift();
+      console.log(op);
+
+      if (op.endsWith('()')) {
+        item = item[op.substr(0,op.length - 2)]();
+      } else {
+        item = item[op];
+      }
+
+    }
+
+    return item;
+
+  }
+
   processLoop(el) {
 
     /*
@@ -113,25 +135,39 @@ class _Component {
     */
 
     const loopExpr = el.getAttribute('f-loop');
-    const [x, _, obj] = loopExpr.split(' '); // x: iterator, xs: target
-    const loopData = { itemNamespace: x, target: obj };
+    const [namespace, _, targetIterableName] = loopExpr.split(' '); // x: iterator, xs: target
+    const targetIterable = this.data[targetIterableName];
+    const variableRE = /{{[^{]*}}/g;
 
     if (el.children.length > 0) {
       // non-terminal: children are html nodes
     } else {
       // terminal: we have text content with potential variables to resolve.
-      if (Array.isArray(xs)) {
+      if (Array.isArray(targetIterable)) {
 
-        const variableRE = /{{[^{]*}}/g;
+        // for each item in target data
+        // parse/instantiate template.
+        // insert into new, shallowly cloned el
+        for (let item of targetIterable) {
 
-        for (let x of xs) {
-          const newEl = document.cloneNode(el);
-          newEl.innerHTML.replaceAll(variableRE, function(templateParam) {
+          const newEl = el.cloneNode();
+          // resolve all template params against this item
+          newEl.innerHTML = el.innerHTML.replaceAll(variableRE, templateParam => {
+
             const variableString = templateParam.substring(2, templateParam.length - 2);
+            const [ namespace, rest ] = variableString.split(/\.(.*)/s); // get first token, and then all after that dot.
+
+            return this.resolveValue(item, rest);
             // how to evaluate parts after itemNamespace against 'x' in this loop
             // i.e. todo[.status.x.y.z] against 'x'
+
           });
+
+          el.parentNode.appendChild(newEl);
+
         }
+
+        el.parentNode.removeChild(el);
 
       } else if (typeof xs === 'object') {
          

@@ -27,7 +27,7 @@ const todoList = new Component({
           <todo></todo>
           <todo></todo>
           <li f-loop="todo in todos">
-            {{todo.title}} {{todo.status}}
+            length:{{todo.title.length.toString().constructor}} status: {{todo.status}}
           </li>
         </ul>       
       </div>
@@ -37,7 +37,7 @@ const todoList = new Component({
   async beforeRender() {
     // const res = await fetch('https://jsonplaceholder.typicode.com/todos');
     // const data = await res.json(); 
-    const data = await [{ title: 'test1' }, { title: 'test2' }];
+    const data = await [{ title: 'test1', status: 'complete' }, { title: 'test2', status: 'complete' }];
     this.data.todos = data;
   }
 
