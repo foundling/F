@@ -3,7 +3,8 @@ import { Component } from './f.js';
 const todoList = new Component({
   className: 'todo-list',
   data: {
-    todos: [{ title: 'test0' }]
+    todos: [], //{ title: 'test0' }, { title: 'test0' }]
+    names: ['alex','jon','dan']
   },
   components: {
     todo: Component({
@@ -25,6 +26,9 @@ const todoList = new Component({
           <todo></todo>
           <todo></todo>
           <todo></todo>
+          <li f-loop="todo in todos">
+            {{todo.title}} {{todo.status}}
+          </li>
         </ul>       
       </div>
     `;
@@ -40,7 +44,6 @@ const todoList = new Component({
 });
 
 const app = todoList();
-console.log('app', app);
 app.init();
 
 document.body.append(app.el);
