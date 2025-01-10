@@ -27,7 +27,7 @@ const todoList = new Component({
           <todo></todo>
           <todo></todo>
           <li f-loop="todo in todos">
-            length:{{todo.title.length.toString().constructor}} status: {{todo.status}}
+            length:{{todo.title.length}} status: {{todo.status}}
           </li>
         </ul>       
       </div>
@@ -47,3 +47,17 @@ const app = todoList();
 app.init();
 
 document.body.append(app.el);
+
+function test() {
+
+  const context = {
+    todos: [{ title: 'todo', status: 'complete' }]
+  }
+
+  function runCodeWithDateFunction(obj) {
+    return Function("context", `"use strict";return (${obj});`)(context);
+  }
+  console.log(runCodeWithDateFunction("false ? context.todos[0] : 'no'"));
+}
+
+test();
