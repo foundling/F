@@ -155,11 +155,15 @@ class _Component {
           newEl.innerHTML = el.innerHTML.replaceAll(variableRE, templateParam => {
 
             const variableString = templateParam.substring(2, templateParam.length - 2);
-            const [ namespace, rest ] = variableString.split(/\.(.*)/s); // get first token, and then all after that dot.
+            const [ variable, rest ] = variableString.split(/\.(.*)/s); // get first token, and then all after that dot.
 
-            return this.resolveValue(item, rest);
-            // how to evaluate parts after itemNamespace against 'x' in this loop
-            // i.e. todo[.status.x.y.z] against 'x'
+            function callResolveTemplateInStrictMode() {
+              "use strict";
+              const resolveTemplate = Function(namespace, targetIterableName, `"use strict"; return (${variableString});`);
+              return resolveTemplate(item, targetIterable);
+            }
+
+            return callResolveTemplateInStrictMode();
 
           });
 
