@@ -25,15 +25,29 @@ const todoList = new Component({
   render(el, context) {
     // TODO: figure out how to parse this by descending the tree.
     // i.e. how to render components in a loop ?
+    //
+    //
+    // if loop: process each child. if child is a loop
     return `
       <div>
         <ul class="todos">
+
           <todo></todo>
           <todo></todo>
           <todo></todo>
-          <li f-loop="todo in todos">
-            length:{{todo.title.length}} status: {{capitalize(todo.status)}}
-          </li>
+
+          <ul f-loop="name in names">
+
+            <li>{{ name }}'s todos</li>
+
+            <li>
+              <ul>
+                <li f-loop="todo in todos">{{ todo }}</li>
+              </ul>
+            </li>
+
+          </ul>
+
         </ul>       
       </div>
     `;

@@ -47,6 +47,7 @@ class _Component {
     // NOTE: currently, directive XOR component, not both. this will change.
  
     const tagName = el.tagName.toLowerCase();
+
     if (this.components && tagName in this.components) {
 
       // It's a component
@@ -73,8 +74,8 @@ class _Component {
       }
     }
 
-
   }
+
   traverse(el, f) {
 
     if (!el) {
@@ -94,9 +95,11 @@ class _Component {
   }
 
   processDirectives(el) {
+
     if ('f-loop' in el.attributes) {
       this.processLoop(el);
     }
+
   }
 
   processTemplate(el, context) {
@@ -123,61 +126,50 @@ class _Component {
 
   }
 
-  processLoop(el) {
-
-    /*
-       identify a loop: done at the top level, but could be nested loop. 
-       look at loop target type:array, object.
-       make loop iterator and target structure available to loop.
-       parse children: 
-        text, optionally containing template variables ||
-        html elements -- could be more loops, or components, or elements w/ directives
-    */
+  processLoop(el, context={}) {
 
     const loopExpr = el.getAttribute('f-loop');
     const [namespace, _, targetIterableName] = loopExpr.split(' '); // x: iterator, xs: target
-    const targetIterable = this.data[targetIterableName];
+    const targetIterable = this.data[targetIterableName]; // TODO: if targetIterable could be a literal, parse accordingly.
     const variableRE = /{{[^{]*}}/g;
 
-    if (el.children.length > 0) {
-      // non-terminal: children are html nodes
-    } else {
-      // terminal: we have text content with potential variables to resolve.
-      if (Array.isArray(targetIterable)) {
+    // for each item in iterable, deal w/ f-loop-ed element's children 
+    for (let item of targetIterable) {
+      for (const childEl of el.children) {
 
-        // for each item in target data
-        // parse/instantiate template.
-        // insert into new, shallowly cloned el
-        for (let item of targetIterable) {
+        if (childEl.getAttribute('f-loop')) {
+          this.processLoop(childEl, {/* outer loops' contexts */}); // note, pass context as param here? outer scope matters.
+        } else {
 
-          const newEl = el.cloneNode();
-          // resolve all template params against this item
-          newEl.innerHTML = el.innerHTML.replaceAll(variableRE, templateParam => {
+          for (let item of targetIterable) {
 
-            const variableString = templateParam.substring(2, templateParam.length - 2);
-            const [ variable, rest ] = variableString.split(/\.(.*)/s); // get first token, and then all after that dot.
+            const newEl = el.cloneNode();
+            // resolve all template params against this item
+            newEl.innerHTML = el.innerHTML.replaceAll(variableRE, templateParam => {
 
-              const resolveTemplate = Function(
-                namespace,
-                targetIterableName,
-                ...Object.keys(this.methods),
-                `"use strict"; return (${variableString});`
-              );
-              return resolveTemplate(item, targetIterable, ...Object.values(this.methods));
+              const variableString = templateParam.substring(2, templateParam.length - 2).trim();
+              const [ variable, rest ] = variableString.split(/\.(.*)/s); // get first token, and then all after that dot.
 
-          });
+                const resolveTemplate = Function(
+                  namespace,
+                  targetIterableName,
+                  ...Object.keys(this.methods),
+                  `"use strict"; return (${variableString});`
+                );
+                return resolveTemplate(item, targetIterable, ...Object.values(this.methods));
 
-          el.parentNode.appendChild(newEl);
+            });
+
+            el.parentNode.appendChild(newEl);
+
+          }
+
+          el.parentNode.removeChild(el);
 
         }
-
-        el.parentNode.removeChild(el);
-
-      } else if (typeof xs === 'object') {
-         
       }
-    }
 
+    }
   }
 
   fIfyRoot() {
