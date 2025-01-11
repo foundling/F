@@ -2,12 +2,13 @@ class _Component {
 
   static componentId = 0;
 
-  constructor({ className, components, events, data, render, beforeRender }) {
+  constructor({ className, components, events, data, render, methods, beforeRender }) {
 
     this.componentId = _Component.componentId++; 
     this.name = className;
     this.className = className;
     this.components = components;
+    this.methods = methods;
     this.data = data || {};
     this.events = events || {};
 
@@ -109,7 +110,6 @@ class _Component {
     while (pathParts.length > 0) {
 
       const op = pathParts.shift();
-      console.log(op);
 
       if (op.endsWith('()')) {
         item = item[op.substr(0,op.length - 2)]();
@@ -157,13 +157,13 @@ class _Component {
             const variableString = templateParam.substring(2, templateParam.length - 2);
             const [ variable, rest ] = variableString.split(/\.(.*)/s); // get first token, and then all after that dot.
 
-            function callResolveTemplateInStrictMode() {
-              "use strict";
-              const resolveTemplate = Function(namespace, targetIterableName, `"use strict"; return (${variableString});`);
-              return resolveTemplate(item, targetIterable);
-            }
-
-            return callResolveTemplateInStrictMode();
+              const resolveTemplate = Function(
+                namespace,
+                targetIterableName,
+                ...Object.keys(this.methods),
+                `"use strict"; return (${variableString});`
+              );
+              return resolveTemplate(item, targetIterable, ...Object.values(this.methods));
 
           });
 

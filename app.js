@@ -6,6 +6,11 @@ const todoList = new Component({
     todos: [], //{ title: 'test0' }, { title: 'test0' }]
     names: ['alex','jon','dan']
   },
+  methods: {
+    capitalize(s) {
+      return s.toUpperCase()
+    }
+  },
   components: {
     todo: Component({
       className: 'todo',
@@ -27,8 +32,7 @@ const todoList = new Component({
           <todo></todo>
           <todo></todo>
           <li f-loop="todo in todos">
-            length:{{todo.title.length}} status: {{todo.status}}
-            math: {{g=4}}
+            length:{{todo.title.length}} status: {{capitalize(todo.status)}}
           </li>
         </ul>       
       </div>
@@ -36,8 +40,6 @@ const todoList = new Component({
   },
 
   async beforeRender() {
-    // const res = await fetch('https://jsonplaceholder.typicode.com/todos');
-    // const data = await res.json(); 
     const data = await [{ title: 'test1', status: 'complete' }, { title: 'test2', status: 'complete' }];
     this.data.todos = data;
   }
