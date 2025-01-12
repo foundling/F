@@ -29,27 +29,27 @@ const todoList = new Component({
     //
     // if loop: process each child. if child is a loop
     return `
-      <div>
-        <ul class="todos">
+      <ul class="todos">
 
-          <todo></todo>
-          <todo></todo>
-          <todo></todo>
+        <todo></todo>
+        <todo></todo>
+        <todo></todo>
 
-          <ul f-loop="name in names">
+        <ul f-loop="name in names">
 
-            <li>{{ name }}'s todos</li>
+          <li>{{ name }}'s todos</li>
 
-            <li>
-              <ul>
-                <li f-loop="todo in todos">{{ todo }}</li>
-              </ul>
-            </li>
+          <li>
+            <ul>
+              <li f-loop="todo in todos">{{ todo }}</li>
+            </ul>
+          </li>
 
-          </ul>
+        </ul>
 
-        </ul>       
-      </div>
+        <h1>todos</h1>
+
+      </ul>       
     `;
   },
 
@@ -65,3 +65,5 @@ app.init();
 
 document.body.append(app.el);
 
+
+console.log(app.el)

@@ -42,38 +42,36 @@ class _Component {
 
   }
 
+  isLoop(el) {
+    return el.getAttribute?.('f-loop');
+  }
+
+  isWhiteSpace(el) {
+    return el.nodeName === '#text' && !el?.data.trim();
+  }
+
   processNode(el) {
     
-    // NOTE: currently, directive XOR component, not both. this will change.
- 
-    const tagName = el.tagName.toLowerCase();
+    if (this.isWhiteSpace(el)) {
+      return;
+    }
 
-    if (this.components && tagName in this.components) {
+    if (this.isLoop(el)) {
 
-      // It's a component
+      console.log('processing loop: ', el.tagName, el);
+      this.traverse(el, this.processLoop.bind(this));
 
-      this.processComponent();
-
-      // create new component
-      const componentFactory = this.components[tagName];
-      const newComponent = componentFactory();
-      newComponent.init();
-      
-      // replace markup w/ actual component markup.
-      el.parentNode.replaceChild(newComponent.el, el);
+      return false;
 
     } else {
-
-      // it's a valid 'directive'
-      const attributeNames = new Set(el.getAttributeNames());
-      const directives = new Set(['f-loop', 'f-if']);
-      const hasDirectives = [...directives.intersection(attributeNames).values()].length > 0;
-
-      if (hasDirectives) {
-        this.processDirectives(el);
+      if (el.tagName?.toLowerCase() in this.components) {
+        console.log('component: ', el.tagName, el);
+      } else {
+        console.log('regular html node: ', el.tagName, el);
       }
     }
 
+    return true;
   }
 
   traverse(el, f) {
@@ -82,9 +80,11 @@ class _Component {
       return;
     }
 
-    f(el);
+    const descend = f(el);
 
-    [...el.children].forEach(child => this.traverse(child, f));
+    if (descend) {
+      [...el.childNodes].forEach(child => this.traverse(child, f));
+    }
 
   }
 
@@ -94,82 +94,16 @@ class _Component {
   processComponent(el) {
   }
 
-  processDirectives(el) {
-
-    if ('f-loop' in el.attributes) {
-      this.processLoop(el);
-    }
-
-  }
-
   processTemplate(el, context) {
   }
 
-  resolveValue(item, path) {
-
-    // item, title, length, toString, constructor
-    let pathParts = path.split('.');
-
-    while (pathParts.length > 0) {
-
-      const op = pathParts.shift();
-
-      if (op.endsWith('()')) {
-        item = item[op.substr(0,op.length - 2)]();
-      } else {
-        item = item[op];
-      }
-
-    }
-
-    return item;
-
-  }
-
   processLoop(el, context={}) {
-
-    const loopExpr = el.getAttribute('f-loop');
-    const [namespace, _, targetIterableName] = loopExpr.split(' '); // x: iterator, xs: target
-    const targetIterable = this.data[targetIterableName]; // TODO: if targetIterable could be a literal, parse accordingly.
-    const variableRE = /{{[^{]*}}/g;
-
-    // for each item in iterable, deal w/ f-loop-ed element's children 
-    for (let item of targetIterable) {
-      for (const childEl of el.children) {
-
-        if (childEl.getAttribute('f-loop')) {
-          this.processLoop(childEl, {/* outer loops' contexts */}); // note, pass context as param here? outer scope matters.
-        } else {
-
-          for (let item of targetIterable) {
-
-            const newEl = el.cloneNode();
-            // resolve all template params against this item
-            newEl.innerHTML = el.innerHTML.replaceAll(variableRE, templateParam => {
-
-              const variableString = templateParam.substring(2, templateParam.length - 2).trim();
-              const [ variable, rest ] = variableString.split(/\.(.*)/s); // get first token, and then all after that dot.
-
-                const resolveTemplate = Function(
-                  namespace,
-                  targetIterableName,
-                  ...Object.keys(this.methods),
-                  `"use strict"; return (${variableString});`
-                );
-                return resolveTemplate(item, targetIterable, ...Object.values(this.methods));
-
-            });
-
-            el.parentNode.appendChild(newEl);
-
-          }
-
-          el.parentNode.removeChild(el);
-
-        }
-      }
-
+    if (!this.isWhiteSpace(el)) {
+      console.log(el.tagName || 'text');
     }
+
+    return true;
+
   }
 
   fIfyRoot() {
