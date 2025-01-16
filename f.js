@@ -107,6 +107,8 @@ class _Component {
 
       } else {
 
+        // this is wrong.  you need to recurse in order to detect loops 
+        // contained inside this tree.
         const clonedChild = child.cloneNode(true);
         const html = clonedChild.innerHTML;
         clonedChild.innerHTML = this.resolveTemplateVariables(html, context);

@@ -47,13 +47,11 @@ const todoList = new Component({
           <h1>{{activity}}</h1>
         </div>
 
-        <!--
-          <ul>
-            <li f-loop="friend in user.friends">
-              <h1>{{friend.name}}</h1>
-            </li>
-          </ul>
-        -->
+        <ul>
+          <li f-loop="friend in user.friends">
+            <h1>{{friend.name}}</h1>
+          </li>
+        </ul>
 
       </div>
     `;
