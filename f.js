@@ -1,3 +1,4 @@
+
 class _Component {
 
   static componentId = 0;
@@ -40,12 +41,32 @@ class _Component {
 
   }
 
+  isWhiteSpaceNode(el) {
+    return el.nodeName === '#text' && !el?.data.trim();
+  }
+
+  isTextNode(el) {
+    return el.nodeName === '#text';
+  }
+
+  isLoop(el) {
+    return Boolean(el.getAttribute('f-loop'));
+  }
+
+  isLeafElement(el) {
+    return !this.isWhiteSpaceNode(el) && this.isTextNode(el);
+  }
+
+  isLeafLoop(el) {
+    return !el.querySelector('[f-loop]');
+  }
+
   isLoop(el) {
     return el.getAttribute?.('f-loop');
   }
 
-  isWhiteSpace(el) {
-    return el.nodeName === '#text' && !el?.data.trim();
+  isCommentNode(el) {
+    return el.nodeName === '#comment';
   }
 
   isTextNode(el) {
@@ -56,39 +77,111 @@ class _Component {
 
   }
 
-  isLeafLoop(el) {
+  processLoopRecursive(children, context) {
 
-    return !el.querySelector(`[f-loop]`);
+    const outputChildren = [];
 
-  }
+    // TODO: resolve template parameters w/ scope.
+    for (const child of children) {
 
-  processLoop(el, context) {
-   
-    // TODO: how to render nested loops?
-    // possible approach:
-    //
-    // you need to get most inner before rendering outer.
-    // determine if loop is a 'leaf' loop, meaning not nested.
-    //
-    // if you can determine that a loop is a leaf loop, you can 
-    // use that as a base case for recursion and return rendered markup.
-    //
-    // if it's not a leaf loop, then you have to keep recursing until you find a leaf-loop.
-    //
-    // need: isLeafLoop(), which will recurse until it determines no loop present
-    // 
+      if (this.isWhiteSpaceNode(child) || this.isCommentNode(child)) {
+        continue;
+      }
+      
+      // nesting in loops affects scope.
+      if (this.isLoop(child)) {
+
+        if (this.isLeafLoop(child)) {
+
+          // we can resolve looped block
+
+          const loopItems = this.resolveLoop(child, context);
+          outputChildren.push(...loopItems);
+
+        } else {
+
+          // has internal loops, process like we did with original loop
+          outputChildren.push(this.processLoop(child, context));
+          
+        }
+
+      } else {
+
+        const clonedChild = child.cloneNode(true);
+        const html = clonedChild.innerHTML;
+        clonedChild.innerHTML = this.resolveTemplateVariables(html, context);
+        outputChildren.push(clonedChild);
+
+      }
 
 
-    if (this.isLeafLoop(el)) {
-      const div = document.createElement('div');
-      div.innerHTML = 'leaf';
-      return div;
-    } else {
-      const children = [...el.childNodes].filter(child => !this.isWhiteSpace(child));
-      return this.processLoop(children[0]);
     }
+
+    return outputChildren;
+
+
   }
-  
+
+  resolveLoop(el, context) {
+
+    const nodes = [];
+
+    for (const i of context.iterable) {
+      const clonedNode = el.cloneNode(true);
+      clonedNode.removeAttribute('f-loop');
+      clonedNode.innerHTML = this.resolveTemplateVariables(clonedNode.innerHTML, context);
+      nodes.push(clonedNode);
+    }
+
+    el.parentNode.removeChild(el);
+
+    return nodes;
+
+  }
+
+  resolveTemplateVariables(template, context) {
+    // demo for now
+    return template.replaceAll(/{{.*[^}]}}/g, 'VARIABLE');
+  }
+
+  resolveLeafNode(el, context) {
+    console.log('text node: ', _child_child.node.nodeValue);
+  }
+
+
+  // gets called when we traverse and encounter a node that has f-loop attribute
+  processLoop(el, context) {
+
+    const els = [];
+
+    // start by looping through data iterable from loop's 'for item in iterable' syntax
+    for (let iterator of context.iterable) {
+
+      // shallow clone the looped container element.
+      const clonedEl = el.cloneNode();
+      clonedEl.removeAttribute('f-loop');
+
+      // process children via separate fn that does the work to descend into the loop
+      // and build the inner content, which could be inner loops
+      const validChildNodes = [...el.childNodes].filter(node => !this.isWhiteSpaceNode(node) && !this.isCommentNode(node));
+      const children = this.processLoopRecursive(validChildNodes, context)
+
+      // append children to cloned node.
+      for (const child of children) {
+        clonedEl.appendChild(child);
+      }
+
+
+      // collect cloned node 
+      els.push(clonedEl);
+
+    }
+
+    // return clones of original f-loop element
+    return els;
+
+  }
+
   parseLoopContext(el) {
 
     const expression = el.getAttribute('f-loop');
@@ -107,18 +200,29 @@ class _Component {
 
   processNode(el) {
     
-    if (this.isWhiteSpace(el)) {
+    if (this.isWhiteSpaceNode(el)) {
       return;
     }
 
-    // loop:
-    // keep going until no more loops, resolve most inner first,
-    // returning processed html
     if (this.isLoop(el)) {
 
       const context = this.parseLoopContext(el);
       const nodes = this.processLoop(el, context);
-      console.log('nodes ', nodes);
+
+      /*
+       * replace template node w/ resolved looped nodes
+       *
+       */
+
+      // append each looped node
+      for (const node of nodes) {
+        el.parentNode.appendChild(node);
+      }
+
+      // remove original f-looped / 'template' node
+      el.parentNode.removeChild(el);
+
+
 
       // tell caller not to keep traversing, move on to next node 
       return false;
