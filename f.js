@@ -26,8 +26,6 @@ class _Component {
       this.render = wrapper;
     }
 
-
-
   }
 
   async init() {
@@ -50,25 +48,87 @@ class _Component {
     return el.nodeName === '#text' && !el?.data.trim();
   }
 
+  isTextNode(el) {
+    return el.nodeName === '#text';
+  }
+
+  parseTextNode(el) {
+
+  }
+
+  isLeafLoop(el) {
+
+    return !el.querySelector(`[f-loop]`);
+
+  }
+
+  processLoop(el, context) {
+   
+    // TODO: how to render nested loops?
+    // possible approach:
+    //
+    // you need to get most inner before rendering outer.
+    // determine if loop is a 'leaf' loop, meaning not nested.
+    //
+    // if you can determine that a loop is a leaf loop, you can 
+    // use that as a base case for recursion and return rendered markup.
+    //
+    // if it's not a leaf loop, then you have to keep recursing until you find a leaf-loop.
+    //
+    // need: isLeafLoop(), which will recurse until it determines no loop present
+    // 
+
+
+    if (this.isLeafLoop(el)) {
+      const div = document.createElement('div');
+      div.innerHTML = 'leaf';
+      return div;
+    } else {
+      const children = [...el.childNodes].filter(child => !this.isWhiteSpace(child));
+      return this.processLoop(children[0]);
+    }
+  }
+  
+  parseLoopContext(el) {
+
+    const expression = el.getAttribute('f-loop');
+    const [iteratorTerm, inKeyword, iterable ] = expression.split(' ');
+
+    if (!(iteratorTerm && inKeyword && iterable) || inKeyword !== 'in') {
+      throw new Error(`Syntax Error at: ${parts[1]} in '${expression}`)
+    }
+
+    return {
+      iteratorTerm,
+      iterable: this.data[iterable]
+    };
+
+  }
+
   processNode(el) {
     
     if (this.isWhiteSpace(el)) {
       return;
     }
 
+    // loop:
+    // keep going until no more loops, resolve most inner first,
+    // returning processed html
     if (this.isLoop(el)) {
 
-      console.log('processing loop: ', el.tagName, el);
-      this.traverse(el, this.processLoop.bind(this));
+      const context = this.parseLoopContext(el);
+      const nodes = this.processLoop(el, context);
+      console.log('nodes ', nodes);
 
+      // tell caller not to keep traversing, move on to next node 
       return false;
 
     } else {
       if (el.tagName?.toLowerCase() in this.components) {
-        console.log('component: ', el.tagName, el);
-      } else {
-        console.log('regular html node: ', el.tagName, el);
+        this.processComponent(el);
+        // component
       }
+
     }
 
     return true;
@@ -97,27 +157,11 @@ class _Component {
   processTemplate(el, context) {
   }
 
-  processLoop(el, context={}) {
-    if (!this.isWhiteSpace(el)) {
-      console.log(el.tagName || 'text');
-    }
-
-    return true;
-
-  }
-
   fIfyRoot() {
 
-    // create unmounted container
-    // append parsed html to it
     const html = this.render();
     const div = document.createElement('div');
     div.insertAdjacentHTML('beforeend', html);
-
-    // modify html according to custom directives
-    //const loops = div.querySelectorAll('[f-loop]');
-    //loops.forEach(loop => this.processLoop(loop));
-
     return div;
   }
 

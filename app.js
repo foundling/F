@@ -23,34 +23,15 @@ const todoList = new Component({
     })
   },
   render(el, context) {
-    // TODO: figure out how to parse this by descending the tree.
-    // i.e. how to render components in a loop ?
-    //
-    //
-    // if loop: process each child. if child is a loop
+  
     return `
-      <ul class="todos">
-
-        <todo></todo>
-        <todo></todo>
-        <todo></todo>
-
-        <ul f-loop="name in names">
-
-          <li>{{ name }}'s todos</li>
-
-          <li>
-            <ul>
-              <li f-loop="todo in todos">{{ todo }}</li>
-            </ul>
-          </li>
-
-        </ul>
-
-        <h1>todos</h1>
-
-      </ul>       
+        <div id="outer" f-loop="name in names">
+          <div id="inner" f-loop="letter in name">
+            letters: {{ letter }}
+          </div>
+        </div>
     `;
+
   },
 
   async beforeRender() {
@@ -64,6 +45,3 @@ const app = todoList();
 app.init();
 
 document.body.append(app.el);
-
-
-console.log(app.el)
