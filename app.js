@@ -37,22 +37,24 @@ const todoList = new Component({
   render(el, context) {
   
     return `
-      <div f-loop="user in users">
-        <div>
-          <h1>my user name is {{user.name}}!</h1>
-          <h1>friends: {{user.friends.length}}!</h1>
+      <div>
+        <div f-loop="user in users">
+          <section>
+            <h1>my user name is {{user.name}}!</h1>
+            <h1>friends: {{user.friends.length}}!</h1>
+          </section>
+
+          <div f-loop="activity in user.activities">
+            <h1>{{activity}}</h1>
+          </div>
+
+          <ul>
+            <li f-loop="friend in user.friends">
+              <h1>{{friend.name}}</h1>
+            </li>
+          </ul>
+
         </div>
-
-        <div f-loop="activity in user.activities">
-          <h1>{{activity}}</h1>
-        </div>
-
-        <ul>
-          <li f-loop="friend in user.friends">
-            <h1>{{friend.name}}</h1>
-          </li>
-        </ul>
-
       </div>
     `;
 
