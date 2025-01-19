@@ -1,4 +1,3 @@
-
 class _Component {
 
   static componentId = 0;
@@ -35,130 +34,6 @@ class _Component {
 
     const appRoot = this.fIfyRoot();
     this.el.appendChild(appRoot);
-
-  }
-
-  isWhiteSpaceNode(el) {
-    return el.nodeName === '#text' && !el?.data.trim();
-  }
-
-  isTextNode(el) {
-    return el.nodeName === '#text';
-  }
-
-  isLoop(el) {
-    return Boolean(el.getAttribute('f-loop'));
-  }
-
-  isLeafElement(el) {
-    return !this.isWhiteSpaceNode(el) && this.isTextNode(el);
-  }
-
-  isLeafLoop(el) {
-    return !el.querySelector('[f-loop]');
-  }
-
-  isLoop(el) {
-    return el.getAttribute?.('f-loop');
-  }
-
-  isCommentNode(el) {
-    return el.nodeName === '#comment';
-  }
-
-  isTextNode(el) {
-    return el.nodeName === '#text';
-  }
-
-  parseTextNode(el) {
-
-  }
-
-  processLoopRecursive(children, context) {
-
-    const outputChildren = [];
-
-    // TODO: resolve template parameters w/ scope.
-    for (const child of children) {
-
-      if (this.isWhiteSpaceNode(child) || this.isCommentNode(child)) {
-        continue;
-      }
-      
-      // nesting in loops affects scope.
-      if (this.isLoop(child)) {
-
-        if (this.isLeafLoop(child)) {
-
-          // we can resolve looped block
-
-          const loopItems = this.resolveLoop(child, context);
-          outputChildren.push(...loopItems);
-
-        } else {
-
-          // has internal loops, process like we did with original loop
-          outputChildren.push(this.processLoop(child, context));
-          
-        }
-
-      } else {
-
-        // this is wrong.  you need to recurse in order to detect loops 
-        // contained inside this tree.
-        const clonedChild = child.cloneNode(true);
-        const html = clonedChild.innerHTML;
-        clonedChild.innerHTML = this.resolveTemplateVariables(html, context);
-        outputChildren.push(clonedChild);
-
-      }
-
-
-    }
-
-    return outputChildren;
-
-
-  }
-
-  resolveLoop(el, context) {
-
-    const nodes = [];
-
-    for (const i of context.iterable) {
-      const clonedNode = el.cloneNode(true);
-      clonedNode.removeAttribute('f-loop');
-      clonedNode.innerHTML = this.resolveTemplateVariables(clonedNode.innerHTML, context);
-      nodes.push(clonedNode);
-    }
-
-    el.parentNode.removeChild(el);
-
-    return nodes;
-
-  }
-
-  resolveTemplateVariables(template, context) {
-    // demo for now
-    return template.replaceAll(/{{.*[^}]}}/g, 'VARIABLE');
-  }
-
-  resolveLeafNode(el, context) {
-    console.log('text node: ', _child_child.node.nodeValue);
-  }
-
-
-  traverse(node, ast) {
-
-    if (node.childNodes.length === 0) {
-      return;
-    }
-
-    ast.children = []; 
-    for (let child of node.childNodes) {
-      console.log(child);
-      return this.traverse(child);
-    }
 
   }
 
@@ -234,39 +109,6 @@ class _Component {
 
   }
 
-  // gets called when we traverse and encounter a node that has f-loop attribute
-  processLoop(el, context) {
-
-    const els = [];
-
-    // start by looping through data iterable from loop's 'for item in iterable' syntax
-    for (let iterator of context.iterable) {
-
-      // shallow clone the looped container element.
-      const clonedEl = el.cloneNode();
-      clonedEl.removeAttribute('f-loop');
-
-      // process children via separate fn that does the work to descend into the loop
-      // and build the inner content, which could be inner loops
-      const validChildNodes = [...el.childNodes].filter(node => !this.isWhiteSpaceNode(node) && !this.isCommentNode(node));
-      const children = this.processLoopRecursive(validChildNodes, context)
-
-      // append children to cloned node.
-      for (const child of children) {
-        clonedEl.appendChild(child);
-      }
-
-
-      // collect cloned node 
-      els.push(clonedEl);
-
-    }
-
-    // return clones of original f-loop element
-    return els;
-
-  }
-
   parseLoopContext(el) {
 
     const expression = el.getAttribute('f-loop');
@@ -283,84 +125,19 @@ class _Component {
 
   }
 
-  processNode(el) {
-    
-    if (this.isWhiteSpaceNode(el)) {
-      return;
-    }
-
-    if (this.isLoop(el)) {
-
-      const context = this.parseLoopContext(el);
-      const nodes = this.processLoop(el, context);
-
-      /*
-       * replace template node w/ resolved looped nodes
-       *
-       */
-
-      // append each looped node
-      for (const node of nodes) {
-        el.parentNode.appendChild(node);
-      }
-
-      // remove original f-looped / 'template' node
-      el.parentNode.removeChild(el);
-
-
-
-      // tell caller not to keep traversing, move on to next node 
-      return false;
-
-    } else {
-      if (el.tagName?.toLowerCase() in this.components) {
-        this.processComponent(el);
-        // component
-      }
-
-    }
-
-    return true;
-  }
-
-  traverse2(el, f) {
-
-    if (!el) {
-      return;
-    }
-
-    const descend = f(el);
-
-    if (descend) {
-      [...el.childNodes].forEach(child => this.traverse2(child, f));
-    }
-
-  }
-
-  processText(el) {
-  }
-
-  processComponent(el) {
-  }
-
-  processTemplate(el, context) {
-  }
-
   fIfyRoot() {
 
     const htmlTemplate = this.render();
     const appRoot = document.createElement('div');
-    appRoot.id = 'root';
+
     appRoot.insertAdjacentHTML('beforeend', htmlTemplate);
 
     const appContext = this.data;
     const ast = this.buildAST(appRoot, appContext);
-    console.log('ast:', ast); 
+
     this.renderAST(appRoot, ast);
 
     return appRoot;
-
-    //appRoot.appendChild(domTree);
 
   }
 

@@ -34,7 +34,7 @@ const todoList = new Component({
   render(el, context) {
   
     return `
-      <div class="loop" f-loop="user in users">
+      <div f-loop="user in users">
         <h1>{{ user.name }}</h1>
         <div class="loop" f-loop="user in users">
           <h1>{{ user.activities }}</h1>
