@@ -5,10 +5,13 @@ const todoList = new Component({
   data: {
     users: [
       {
-        name: "bob",
+        name: 'maria',
       },
       {
         name: "jane",
+      },
+      {
+        name: "bob",
       }
     ]
   },
@@ -31,8 +34,13 @@ const todoList = new Component({
   render(el, context) {
   
     return `
-      <div f-loop="user in users">
+      <div class="loop" f-loop="user in users">
         <h1>{{ user.name }}</h1>
+        <div class="loop" f-loop="user in users">
+          <h1>{{ user.activities }}</h1>
+          <br>
+        <div class="loop" f-loop="user in users">
+        </div>
       </div>
     `;
 

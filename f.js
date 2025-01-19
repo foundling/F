@@ -201,30 +201,31 @@ class _Component {
     if (!el) return null;
 
     const t = {
-      node: el.cloneNode(true),
-      children: [],
-      isLoop: Boolean(el.getAttribute('f-loop'))
+      // if has only text node as child, take that with it by cloning w/ true flag.
+      node: (!el.children || !el.children.length) ? el.cloneNode(true) : el.cloneNode(),
+      children: []
     };
 
     const validChildNodes = this.getValidNodes(el.childNodes);
 
-    if (validChildNodes.length === 0) return;
+    if (validChildNodes.length > 0) {
 
-    // FIXME: this is appending looped children to the loop item, it should REPLACE loop item with its looped children.
-    // so parent of loop item gets n instances of el, not 1.
-    if (t.isLoop) {
+      for (const childNode of validChildNodes) {
 
-      const loopContext = this.parseLoopContext(el);
-      for (const iterator of loopContext.iterable) {
-        const loopClone = el.cloneNode(true);
-        loopClone.removeAttribute('f-loop');
-        t.children.push(this.buildAST(loopClone, loopContext));
-      }
+        if (childNode.hasAttribute('f-loop')) {
+          // if child node has an f-loop attribute, we are going to treat it like
+          // it's N-elements, not just one.
+          const parsedContext = this.parseLoopContext(childNode);
+          for (const iterator of parsedContext.iterable) { 
+            const clonedChild = childNode.cloneNode(true);
+            clonedChild.removeAttribute('f-loop');
+            t.children.push(this.buildAST(clonedChild, context));
+          }
+          childNode.parentNode.removeChild(childNode);
 
-    } else {
-
-      for (const c of validChildNodes) {
-        t.children.push(this.buildAST(c, context));
+        } else {
+          t.children.push(this.buildAST(childNode, context));
+        }
       }
 
     }
@@ -349,10 +350,12 @@ class _Component {
 
     const htmlTemplate = this.render();
     const appRoot = document.createElement('div');
+    appRoot.id = 'root';
     appRoot.insertAdjacentHTML('beforeend', htmlTemplate);
 
     const appContext = this.data;
     const ast = this.buildAST(appRoot, appContext);
+    console.log('ast:', ast); 
     this.renderAST(appRoot, ast);
 
     return appRoot;
