@@ -34,7 +34,7 @@ class _Component {
     await this.beforeRender();
 
     const root = this.fIfyRoot();
-    const ast = this.buildAST(root);
+    const ast = this.buildAST(root, this.data);
     console.log('ast: ', ast);
 
     this.el.appendChild(root);
@@ -184,21 +184,23 @@ class _Component {
   }
 
   // this is really just a tree copy fn at this point.
-  buildAST(el) {
+  buildAST(el, context) {
 
     if (!el) return null;
 
-    const dst = {
+    const t = {
       node: el.cloneNode(),
-      children: []
+      children: [],
+      isLoop: Boolean(el.getAttribute('f-loop')),
+      isLeafLoop: Boolean(el.getAttribute('f-loop')) && Boolean(el.querySelector('[f-loop]'))
     };
 
     const validChildNodes = this.getValidNodes(el.childNodes);
     for (const c of validChildNodes) {
-      dst.children.push(this.buildAST(c));
+      t.children.push(this.buildAST(c), context);
     }
 
-    return dst;
+    return t;
 
   }
 
