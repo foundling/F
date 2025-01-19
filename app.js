@@ -32,7 +32,7 @@ const todoList = new Component({
   
     return `
       <div f-loop="user in users">
-        {{ user.name }}
+        <h1>{{ user.name }}</h1>
       </div>
     `;
 

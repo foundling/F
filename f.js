@@ -33,14 +33,8 @@ class _Component {
 
     await this.beforeRender();
 
-    const root = this.fIfyRoot();
-    const ast = this.buildAST(root, this.data);
-    console.log('ast: ', ast);
-
-    this.el.appendChild(root);
-    console.log(ast);
-    //this.traverse2(this.el, this.processNode.bind(this));
-    //this.bindEvents();
+    const appRoot = this.fIfyRoot();
+    this.el.appendChild(appRoot);
 
   }
 
@@ -183,21 +177,56 @@ class _Component {
     return validNodes;
   }
 
-  // this is really just a tree copy fn at this point.
+  renderAST(domTree, astNode) {
+
+    if (!astNode) return;
+
+    domTree.appendChild(astNode.node);
+
+    if (!astNode.children?.length) {
+      return;
+    }
+
+    const newDomTree = astNode.node;
+
+    for (const childASTNode of astNode.children) {
+      this.renderAST(newDomTree, childASTNode);
+    }
+
+  }
+
+
   buildAST(el, context) {
 
     if (!el) return null;
 
     const t = {
-      node: el.cloneNode(),
+      node: el.cloneNode(true),
       children: [],
-      isLoop: Boolean(el.getAttribute('f-loop')),
-      isLeafLoop: Boolean(el.getAttribute('f-loop')) && Boolean(el.querySelector('[f-loop]'))
+      isLoop: Boolean(el.getAttribute('f-loop'))
     };
 
     const validChildNodes = this.getValidNodes(el.childNodes);
-    for (const c of validChildNodes) {
-      t.children.push(this.buildAST(c), context);
+
+    if (validChildNodes.length === 0) return;
+
+    // FIXME: this is appending looped children to the loop item, it should REPLACE loop item with its looped children.
+    // so parent of loop item gets n instances of el, not 1.
+    if (t.isLoop) {
+
+      const loopContext = this.parseLoopContext(el);
+      for (const iterator of loopContext.iterable) {
+        const loopClone = el.cloneNode(true);
+        loopClone.removeAttribute('f-loop');
+        t.children.push(this.buildAST(loopClone, loopContext));
+      }
+
+    } else {
+
+      for (const c of validChildNodes) {
+        t.children.push(this.buildAST(c, context));
+      }
+
     }
 
     return t;
@@ -318,10 +347,18 @@ class _Component {
 
   fIfyRoot() {
 
-    const html = this.render();
-    const div = document.createElement('div');
-    div.insertAdjacentHTML('beforeend', html);
-    return div;
+    const htmlTemplate = this.render();
+    const appRoot = document.createElement('div');
+    appRoot.insertAdjacentHTML('beforeend', htmlTemplate);
+
+    const appContext = this.data;
+    const ast = this.buildAST(appRoot, appContext);
+    this.renderAST(appRoot, ast);
+
+    return appRoot;
+
+    //appRoot.appendChild(domTree);
+
   }
 
   bindEvents() {
