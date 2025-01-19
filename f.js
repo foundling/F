@@ -52,7 +52,7 @@ class _Component {
     return validNodes;
   }
 
-  renderAST(domTree, astNode) {
+  renderTree(domTree, astNode) {
 
     if (!astNode) return;
 
@@ -65,18 +65,20 @@ class _Component {
     const newDomTree = astNode.node;
 
     for (const childASTNode of astNode.children) {
-      this.renderAST(newDomTree, childASTNode);
+      this.renderTree(newDomTree, childASTNode);
     }
 
   }
 
 
-  buildAST(el, context) {
+  processComponentTemplate(el, context) {
 
     if (!el) return null;
 
     const t = {
-      // if has only text node as child, take that with it by cloning w/ true flag.
+      // if element has only text node as child,
+      // include it by cloning w/ true flag.
+      // otherwise, only grab current node.
       node: (!el.children || !el.children.length) ? el.cloneNode(true) : el.cloneNode(),
       children: []
     };
@@ -94,12 +96,12 @@ class _Component {
           for (const iterator of parsedContext.iterable) { 
             const clonedChild = childNode.cloneNode(true);
             clonedChild.removeAttribute('f-loop');
-            t.children.push(this.buildAST(clonedChild, context));
+            t.children.push(this.processComponentTemplate(clonedChild, context));
           }
           childNode.parentNode.removeChild(childNode);
 
         } else {
-          t.children.push(this.buildAST(childNode, context));
+          t.children.push(this.processComponentTemplate(childNode, context));
         }
       }
 
@@ -133,9 +135,9 @@ class _Component {
     appRoot.insertAdjacentHTML('beforeend', htmlTemplate);
 
     const appContext = this.data;
-    const ast = this.buildAST(appRoot, appContext);
+    const ast = this.processComponentTemplate(appRoot, appContext);
 
-    this.renderAST(appRoot, ast);
+    this.renderTree(appRoot, ast);
 
     return appRoot;
 
