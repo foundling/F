@@ -34,10 +34,13 @@ class _Component {
     await this.beforeRender();
 
     const root = this.fIfyRoot();
+    const ast = this.buildAST(root);
+    console.log('ast: ', ast);
 
     this.el.appendChild(root);
-    this.traverse(this.el, this.processNode.bind(this));
-    this.bindEvents();
+    console.log(ast);
+    //this.traverse2(this.el, this.processNode.bind(this));
+    //this.bindEvents();
 
   }
 
@@ -151,6 +154,54 @@ class _Component {
   }
 
 
+  traverse(node, ast) {
+
+    if (node.childNodes.length === 0) {
+      return;
+    }
+
+    ast.children = []; 
+    for (let child of node.childNodes) {
+      console.log(child);
+      return this.traverse(child);
+    }
+
+  }
+
+  getValidNodes(nodeArray) {
+
+    const validNodes = []; 
+
+    for (const node of nodeArray) {
+      if (['#text','#comment'].includes(node.nodeName)) {
+        continue;
+      }
+      validNodes.push(node);
+    }
+
+
+    return validNodes;
+  }
+
+  // this is really just a tree copy fn at this point.
+  buildAST(el) {
+
+    if (!el) return null;
+
+    const dst = {
+      node: el.cloneNode(),
+      children: []
+    };
+
+    const validChildNodes = this.getValidNodes(el.childNodes);
+    for (const c of validChildNodes) {
+      dst.children.push(this.buildAST(c));
+    }
+
+    return dst;
+
+  }
+
   // gets called when we traverse and encounter a node that has f-loop attribute
   processLoop(el, context) {
 
@@ -240,7 +291,7 @@ class _Component {
     return true;
   }
 
-  traverse(el, f) {
+  traverse2(el, f) {
 
     if (!el) {
       return;
@@ -249,7 +300,7 @@ class _Component {
     const descend = f(el);
 
     if (descend) {
-      [...el.childNodes].forEach(child => this.traverse(child, f));
+      [...el.childNodes].forEach(child => this.traverse2(child, f));
     }
 
   }
