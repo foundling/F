@@ -42,12 +42,13 @@ class _Component {
     const validNodes = []; 
 
     for (const node of nodeArray) {
-      if (['#text','#comment'].includes(node.nodeName)) {
-        continue;
-      }
-      validNodes.push(node);
-    }
 
+      if (this.isWhiteSpace(node)) continue
+      if (this.isComment(node)) continue
+
+      validNodes.push(node);
+
+    }
 
     return validNodes;
   }
@@ -71,7 +72,42 @@ class _Component {
   }
 
 
+  isLoopNode(el) {
+    return el.hasAttribute?.('f-loop');
+  }
+
+  isTextNode(el) {
+    return el.nodeName === '#text';
+  }
+
+  isWhiteSpace(el) {
+    return this.isTextNode(el) && el.data.trim() === '';
+  }
+
+  isComment(el) {
+    return el.nodeName === '#comment';
+  }
+
+  lookupByDotPath(o, path) {
+    let parts = path.split('.').slice(1);
+    while (parts.length > 0) {
+      const segment = parts.shift();
+      o = o[segment];
+    }
+    return o;
+  }
+
   processComponentTemplate(el, context) {
+
+    // approach: create a crude AST from the template by roughly
+    // copying the tree but expanding loops.
+    // re: loops ... for f-loop attributes: from the parent point of view,
+    // replace any children w/ f-loop attributes with their 'unrolled values',
+    // i.e. n copies of the child and containing tree.  delete original f-looped
+    // child. recurse on all children.
+    //
+    //
+    // context: context gets more specific with each nested loop.
 
     if (!el) return null;
 
@@ -89,20 +125,44 @@ class _Component {
 
       for (const childNode of validChildNodes) {
 
-        if (childNode.hasAttribute('f-loop')) {
+        if (this.isLoopNode(childNode)) {
           // if child node has an f-loop attribute, we are going to treat it like
           // it's N-elements, not just one.
-          const parsedContext = this.parseLoopContext(childNode);
-          for (const iterator of parsedContext.iterable) { 
+          const { iteratorTerm, iterableKey } = this.parseLoopExpression(childNode);
+
+          // TODO: write util func that turns x.y.z into o['x']['y']['z'] 
+          const iterablePath = iterableKey.split('.').slice(-1)[0]; // TODO: handle x.y.z -> data[x][y][z] when keying into data obj below.
+          const iteratorPath = iteratorTerm.split('.').slice(1).join('.'); // gets everything after first '<identifier>.'
+
+          for (const [index, value] of context.data[iterablePath].entries()) { 
+
             const clonedChild = childNode.cloneNode(true);
             clonedChild.removeAttribute('f-loop');
+            const context = {
+              data: value,
+              dataIndex: index
+            };
             t.children.push(this.processComponentTemplate(clonedChild, context));
+
           }
+
           childNode.parentNode.removeChild(childNode);
 
-        } else {
+        } else if (this.isTextNode(childNode) && !this.isWhiteSpace(childNode)) {
+
+          childNode.nodeValue = childNode.nodeValue.replaceAll(/{{.*[^}]}}/g, function(match) {
+            const expression = match.substring(2, match.length - 2).trim();
+            const arg = expression.split('.')[0];
+            return Function([arg], `return ${expression};`)(context.data);
+          });
           t.children.push(this.processComponentTemplate(childNode, context));
+
+        } else {
+
+          t.children.push(this.processComponentTemplate(childNode, context));
+
         }
+
       }
 
     }
@@ -111,18 +171,18 @@ class _Component {
 
   }
 
-  parseLoopContext(el) {
+  parseLoopExpression(el) {
 
     const expression = el.getAttribute('f-loop');
-    const [iteratorTerm, inKeyword, iterable ] = expression.split(' ');
+    const [iteratorTerm, inKeyword, iterableKey ] = expression.split(' ');
 
-    if (!(iteratorTerm && inKeyword && iterable) || inKeyword !== 'in') {
+    if (!(iteratorTerm && inKeyword && iterableKey) || inKeyword !== 'in') {
       throw new Error(`Syntax Error at: ${parts[1]} in '${expression}`)
     }
 
     return {
       iteratorTerm,
-      iterable: this.data[iterable]
+      iterableKey
     };
 
   }
@@ -134,8 +194,8 @@ class _Component {
 
     appRoot.insertAdjacentHTML('beforeend', htmlTemplate);
 
-    const appContext = this.data;
-    const ast = this.processComponentTemplate(appRoot, appContext);
+    // context should have global data and scoped data, { data, scope }
+    const ast = this.processComponentTemplate(appRoot, { data: this.data, scope: this.data, propertyPath: '' });
 
     this.renderTree(appRoot, ast);
 

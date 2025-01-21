@@ -6,12 +6,16 @@ const todoList = new Component({
     users: [
       {
         name: 'maria',
+        activities: ['running', 'jumping', 'talking'],
       },
       {
         name: "jane",
+        activities: ['skiing', 'talking', 'writing'],
+
       },
       {
         name: "bob",
+        activities: ['skiing', 'swimming', 'drawing'],
       }
     ]
   },
@@ -35,20 +39,20 @@ const todoList = new Component({
   
     return `
       <div f-loop="user in users">
-        <h1>{{ user.name }}</h1>
-        <div class="loop" f-loop="user in users">
-          <h1>{{ user.activities }}</h1>
+        <h1>{{user.name}}</h1>
+        <div f-loop="activity in user.activities">
+          <h1>{{activity}}</h1>
           <br>
-        <div class="loop" f-loop="user in users">
-        </div>
       </div>
     `;
 
   },
 
   async beforeRender() {
+    /*
     const data = await [{ title: 'test1', status: 'complete' }, { title: 'test2', status: 'complete' }];
     this.data.todos = data;
+    */
   }
 
 });
