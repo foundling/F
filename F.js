@@ -136,7 +136,8 @@ class _Component {
             clonedChild.removeAttribute('f-loop');
             const context = {
               data: value,
-              dataIndex: index
+              dataIndex: index,
+              iteratorTerm
             };
             t.children.push(this.processComponentTemplate(clonedChild, context));
 
@@ -148,10 +149,16 @@ class _Component {
 
           childNode.nodeValue = childNode.nodeValue.replaceAll(/{{.*[^}]}}/g, (match) => {
             const expression = match.substring(2, match.length - 2).trim();
-            const arg = expression.split('.')[0];
-            const capitalize = (v) => v.toUpperCase(v);
-            const resolveTemplate = Function(arg, ...Object.keys(this.methods), `"use strict"; return (${expression});`);
-            return resolveTemplate(context.data, ...Object.values(this.methods));
+            const methodParams = Object.keys(this.methods); 
+            const arg1 = expression.split('.')[0];
+            const methodArgs = Object.values(this.methods);
+            try {
+              const resolveTemplate = Function(context.iteratorTerm, ...methodParams, `return ${expression}`);
+              return resolveTemplate(context.data, ...methodArgs);
+            } catch(e) {
+              console.log('function constructor error: ', e);
+              return 'ERROR';
+            }
           });
           t.children.push(this.processComponentTemplate(childNode, context));
 

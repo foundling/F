@@ -39,10 +39,11 @@ const todoList = new Component({
   
     return `
       <div f-loop="user in data.users">
-        <h1>{{user.name}}'s favorite activites</h1>
+        <h1>{{user.name}}'s favorite things to do:</h1>
         <ul>
           <li f-loop="activity in user.activities">
             <h1>{{capitalize(activity)}}</h1>
+            <h1>{{[...activity].map(x => 'X').join('')}}</h1>
             <!--
             this fails!
             <ul>
