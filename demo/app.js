@@ -42,7 +42,7 @@ const todoList = new Component({
         <h1>{{user.name}}'s favorite activites</h1>
         <ul>
           <li f-loop="activity in user.activities">
-            <h1>{{activity}}</h1>
+            <h1>{{capitalize(activity)}}</h1>
             <!--
             this fails!
             <ul>

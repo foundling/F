@@ -146,10 +146,12 @@ class _Component {
 
         } else if (this.isTextNode(childNode) && !this.isWhiteSpace(childNode)) {
 
-          childNode.nodeValue = childNode.nodeValue.replaceAll(/{{.*[^}]}}/g, function(match) {
+          childNode.nodeValue = childNode.nodeValue.replaceAll(/{{.*[^}]}}/g, (match) => {
             const expression = match.substring(2, match.length - 2).trim();
             const arg = expression.split('.')[0];
-            return Function([arg], `return ${expression};`)(context.data);
+            const capitalize = (v) => v.toUpperCase(v);
+            const resolveTemplate = Function(arg, ...Object.keys(this.methods), `"use strict"; return (${expression});`);
+            return resolveTemplate(context.data, ...Object.values(this.methods));
           });
           t.children.push(this.processComponentTemplate(childNode, context));
 
