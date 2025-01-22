@@ -1,4 +1,4 @@
-import { Component } from './f.js';
+import { Component } from '../F.js';
 
 const todoList = new Component({
   className: 'todo-list',
