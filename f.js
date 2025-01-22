@@ -112,10 +112,7 @@ class _Component {
     if (!el) return null;
 
     const t = {
-      // if element has only text node as child,
-      // include it by cloning w/ true flag.
-      // otherwise, only grab current node.
-      node: (!el.children || !el.children.length) ? el.cloneNode(true) : el.cloneNode(),
+      node: el.cloneNode(),
       children: []
     };
 
@@ -130,11 +127,10 @@ class _Component {
           // it's N-elements, not just one.
           const { iteratorTerm, iterableKey } = this.parseLoopExpression(childNode);
 
-          // TODO: write util func that turns x.y.z into o['x']['y']['z'] 
-          const iterablePath = iterableKey.split('.').slice(-1)[0]; // TODO: handle x.y.z -> data[x][y][z] when keying into data obj below.
-          const iteratorPath = iteratorTerm.split('.').slice(1).join('.'); // gets everything after first '<identifier>.'
+          const iterablePath = iterableKey.split('.').slice(-1)[0];
+          const iteratorPath = iteratorTerm.split('.').slice(1).join('.');
 
-          for (const [index, value] of context.data[iterablePath].entries()) { 
+          for (const [index, value] of [...context.data[iterablePath]].entries()) { 
 
             const clonedChild = childNode.cloneNode(true);
             clonedChild.removeAttribute('f-loop');
