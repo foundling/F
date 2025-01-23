@@ -34,6 +34,7 @@ class _Component {
 
     const appRoot = this.fIfyRoot();
     this.el.appendChild(appRoot);
+    this.bindEvents();
 
   }
 
