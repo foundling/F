@@ -9,7 +9,7 @@ class _Component {
     this.className = className;
     this.components = components;
     this.methods = methods;
-    this.data = data || {};
+    this.data = data || data; //https://frontendmasters.com/blog/vanilla-javascript-reactivity/ 
     this.events = events || {};
 
     this.el = document.createElement('div');
