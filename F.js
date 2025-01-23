@@ -4,7 +4,7 @@ class _Component {
 
   constructor({ className, components, events, data, render, methods, beforeRender }) {
 
-    this.componentId = _Component.componentId++; 
+    this.componentId = _Component.componentId++;
     this.name = className;
     this.className = className;
     this.components = components;
@@ -39,7 +39,7 @@ class _Component {
 
   getValidNodes(nodeArray) {
 
-    const validNodes = []; 
+    const validNodes = [];
 
     for (const node of nodeArray) {
 
@@ -89,11 +89,21 @@ class _Component {
   }
 
   lookupByDotPath(o, path) {
-    let parts = path.split('.').slice(1);
-    while (parts.length > 0) {
-      const segment = parts.shift();
+
+    let parts = path.split('.');
+
+
+    // if just 'users', return o['users']
+    if (parts.length === 1) {
+      return o[parts[0]];
+    }
+
+    const segments = parts.slice(1);
+    while (segments.length > 0) {
+      const segment = segments.shift();
       o = o[segment];
     }
+
     return o;
   }
 
@@ -125,19 +135,43 @@ class _Component {
         if (this.isLoopNode(childNode)) {
           // if child node has an f-loop attribute, we are going to treat it like
           // it's N-elements, not just one.
-          const { iteratorTerm, iterableKey } = this.parseLoopExpression(childNode);
+
+
+          /*
+           * two cases for expression:
+           *
+           * 1: top-level: iterable is not a product of prior iteration, it's just looked up on the component's data obj
+           *    user in users
+           *
+           * context: data
+           * expression: user in users
+           * lookup: data.users
+           *
+           *
+           * 2: iterable is product of prior iteration
+           *    activity in user.activities
+           *
+           * context: users
+           * expression: activity in user.activities
+           * lookup: users[i].activities
+           *
+           *
+           * so: if context is an object, user iterable name as key.
+           * if it's an array
+           */
+          const { iteratorAlias, iterableKey } = this.parseLoopExpression(childNode);
 
           const iterablePath = iterableKey.split('.').slice(-1)[0];
-          const iteratorPath = iteratorTerm.split('.').slice(1).join('.');
+          const iterable = typeof context.data === 'string' ? [...context.data] : Array.isArray(context.data) ?  context.data : this.lookupByDotPath(context.data, iterableKey);
 
-          for (const [index, value] of [...context.data[iterablePath]].entries()) { 
+          for (const [index, value] of Object.entries(iterable)) {
 
             const clonedChild = childNode.cloneNode(true);
             clonedChild.removeAttribute('f-loop');
             const context = {
               data: value,
               dataIndex: index,
-              iteratorTerm
+              iteratorAlias
             };
             t.children.push(this.processComponentTemplate(clonedChild, context));
 
@@ -149,11 +183,11 @@ class _Component {
 
           childNode.nodeValue = childNode.nodeValue.replaceAll(/{{.*[^}]}}/g, (match) => {
             const expression = match.substring(2, match.length - 2).trim();
-            const methodParams = Object.keys(this.methods); 
+            const methodParams = Object.keys(this.methods);
             const arg1 = expression.split('.')[0];
             const methodArgs = Object.values(this.methods);
             try {
-              const resolveTemplate = Function(context.iteratorTerm, ...methodParams, `return ${expression}`);
+              const resolveTemplate = Function(context.iteratorAlias, ...methodParams, `return ${expression}`);
               return resolveTemplate(context.data, ...methodArgs);
             } catch(e) {
               console.log('function constructor error: ', e);
@@ -179,14 +213,14 @@ class _Component {
   parseLoopExpression(el) {
 
     const expression = el.getAttribute('f-loop');
-    const [iteratorTerm, inKeyword, iterableKey ] = expression.split(' ');
+    const [iteratorAlias, inKeyword, iterableKey ] = expression.split(' ');
 
-    if (!(iteratorTerm && inKeyword && iterableKey) || inKeyword !== 'in') {
+    if (!(iteratorAlias && inKeyword && iterableKey) || inKeyword !== 'in') {
       throw new Error(`Syntax Error at: ${parts[1]} in '${expression}`)
     }
 
     return {
-      iteratorTerm,
+      iteratorAlias,
       iterableKey
     };
 
@@ -200,7 +234,7 @@ class _Component {
     appRoot.insertAdjacentHTML('beforeend', htmlTemplate);
 
     // context should have global data and scoped data, { data, scope }
-    const ast = this.processComponentTemplate(appRoot, { data: this.data, scope: this.data, propertyPath: '' });
+    const ast = this.processComponentTemplate(appRoot, { data: this.data, dataIndex: null, iteratorAlias: null });
 
     this.renderTree(appRoot, ast);
 
